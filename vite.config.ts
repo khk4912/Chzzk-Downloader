@@ -31,5 +31,10 @@ export default defineConfig({
       public: path.resolve(__dirname, 'public'),
     }
   },
+  css: {
+    modules: {
+      localsConvention: 'camelCase'
+    }
+  }
       
 })

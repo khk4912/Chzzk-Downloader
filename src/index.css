@@ -1,10 +1,17 @@
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css");
 
+:root {
+  --color-bg: #141517;
+  --chzzk-green: #00ffa3;
+  --chzzk-gray: #697183;
+  --chzzk-light-gray: #a0a0a0;
+}
+
 body {
-  font-family: "Pretendard Variable", Pretendard, -apple-system,
+  font-family: "Pretendar Variable", Pretendard, -apple-system,
     BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI",
     "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
-
-  background-color: aqua;
+  color: white;
+  background-color: var(--color-bg);
 }

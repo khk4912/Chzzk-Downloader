@@ -41,6 +41,7 @@ function createWindow (): void {
   })
 
   if (VITE_DEV_SERVER_URL !== undefined) {
+    console.log('VITE_DEV_SERVER_URL:', VITE_DEV_SERVER_URL)
     void win.loadURL(VITE_DEV_SERVER_URL)
   } else {
     void win.loadFile(path.join(RENDERER_DIST, 'index.html'))
