@@ -1,0 +1,27 @@
+.card {
+  aspect-ratio: 16 / 15;
+  border: red solid;
+}
+
+.task-image .skeleton-task-image {
+  height: 30%;
+}
+
+.skeleton-task-image {
+  width: 100%;
+  height: 70%;
+  background-color: gray;
+}
+
+.task-content {
+  display: flex;
+  width: 100%;
+  height: 30%;
+}
+
+.skeleton-task-title {
+  width: 100%;
+  height: 20%;
+  margin-top: 5%;
+  background-color: red;
+}

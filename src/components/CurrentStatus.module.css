@@ -3,3 +3,14 @@
   display: block;
   margin: 5vh auto;
 }
+
+.task {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  column-gap: 3vw;
+  row-gap: 3vh;
+  justify-content: center;
+  border: white dashed;
+}

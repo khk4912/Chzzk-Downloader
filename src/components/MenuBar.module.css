@@ -42,7 +42,8 @@
   }
 
   border-radius: 10px;
-  transition: background-color linear 0.3s, color linear 0.3s, fliter ease 0.3s;
+  transition: background-color linear 0.3s, color linear 0.3s,
+    filter linear 0.3s;
 }
 
 .menu-item img {
