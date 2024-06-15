@@ -27,15 +27,17 @@ export function parseM3U8 (data: string): M3U8Playlist {
 
       const url = lines.shift() ?? ''
 
-      if (bandwidth !== undefined && resolution !== undefined &&
-         codecs !== undefined) {
-        playlist.segments.push({
-          bandwidth: parseInt(bandwidth),
-          resolution,
-          codecs,
-          url
-        })
+      if (bandwidth === undefined || resolution === undefined ||
+         codecs === undefined) {
+        continue
       }
+
+      playlist.segments.push({
+        bandwidth: parseInt(bandwidth),
+        resolution,
+        codecs,
+        url
+      })
     }
   }
 
