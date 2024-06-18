@@ -21,6 +21,9 @@ importers:
         specifier: ^6.23.0
         version: 6.23.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
+      '@types/hls-parser':
+        specifier: ^0.8.7
+        version: 0.8.7
       '@types/node':
         specifier: ^20.14.2
         version: 20.14.2
@@ -543,6 +546,9 @@ packages:
 
   '@types/fs-extra@9.0.13':
     resolution: {integrity: sha512-nEnwB++1u5lVDM2UI4c1+5R+FYaKfaAzS4OococimjVm3nQw3TuzH5UNsocrcTBbhnerblyHj4A49qXbIiZdpA==}
+
+  '@types/hls-parser@0.8.7':
+    resolution: {integrity: sha512-3ry9V6i/uhSbNdvBUENAqt2p5g+xKIbjkr5Qv4EaXe7eIJnaGQntFZalRLQlKoEop381a0LwUr2qNKKlxQC4TQ==}
 
   '@types/http-cache-semantics@4.0.4':
     resolution: {integrity: sha512-1m0bIFVc7eJWyve9S0RnuRgcQqF/Xd5QsUZAZeQFr1Q3/p9JWoQQEqmVy+DPTNpGXwhgIetAoYF8JSc33q29QA==}
@@ -3122,6 +3128,10 @@ snapshots:
   '@types/estree@1.0.5': {}
 
   '@types/fs-extra@9.0.13':
+    dependencies:
+      '@types/node': 20.14.2
+
+  '@types/hls-parser@0.8.7':
     dependencies:
       '@types/node': 20.14.2
 
