@@ -2,7 +2,7 @@ import { parse, setOptions } from 'hls-parser'
 
 import { getDefaultDownloadPath } from '../utils/download_path'
 import { promises as fs } from 'fs'
-import { MediaPlaylist } from 'hls-parser/types'
+import { MasterPlaylist, MediaPlaylist } from 'hls-parser/types'
 
 /* TODO: VOD / 클립 / 생방송 다운로드, DownloaderBase 이용해서 각자 만들고 추상화.
    Downloader 클래스는 위 클래스의 Wrapper로 작동하도록 할    */
@@ -21,7 +21,7 @@ export class DownloaderBase {
     this.downloadPath = downloadPath ?? getDefaultDownloadPath()
   }
 
-  protected async downloadAndWrite (url: string, filePath: string): Promise<void> {
+  protected async downloadAndWrite (url: string | URL, filePath: string): Promise<void> {
     const response = await fetch(url)
     const reader = response.body?.getReader()
 
@@ -38,19 +38,22 @@ export class DownloaderBase {
 
       await fs.appendFile(filePath, value)
     }
+    console.log('downloaded!')
   }
 }
 
 export class M3U8Downloader extends DownloaderBase {
-  private readonly playlistURL: string
-  private mediaSequence = -1
-
+  private readonly playlistURL: URL
   private readonly ready: boolean = false
+
   private isRunning: boolean = false
+
+  private mediaSequence = -1
+  private targetChunkListURL: URL | null = null
 
   constructor (playlistURL: string, fileName: string, downloadPath?: string) {
     super(fileName, downloadPath)
-    this.playlistURL = playlistURL
+    this.playlistURL = new URL(playlistURL)
 
     setOptions({
       silent: true
@@ -59,7 +62,7 @@ export class M3U8Downloader extends DownloaderBase {
 
   start (): void {
     this.isRunning = true
-    this.run().then().catch(e => e)
+    this.run().then().catch(e => { console.error(e) })
   }
 
   stop (): void {
@@ -73,54 +76,68 @@ export class M3U8Downloader extends DownloaderBase {
 
     while (this.isRunning) {
       // Sth more to do
+
     }
   }
 
+  /**
+   * M3U8 파일을 파싱하고, 가장 높은 품질의 URL을 찾아내어 targetChunkListURL에 저장합니다.
+   * 그 후, targetChunkListURL을 이용하여 Media Sequence를 찾아내어 저장합니다.
+   *
+   * @returns Promise<void>
+   */
   async init (): Promise<void> {
     const response = await fetch(this.playlistURL)
     const playlist = await response.text()
     const parsedPlaylist = parse(playlist)
 
+    if (!(parsedPlaylist instanceof MasterPlaylist)) {
+      throw new Error('Invalid playlist!')
+    }
+
+    const variants = parsedPlaylist.variants
+    variants.sort((a, b) => a.bandwidth - b.bandwidth)
+
+    const highestQuality = variants[variants.length - 1]
+    const highestQualityURL = highestQuality.uri
+
+    this.targetChunkListURL = new URL(`./${highestQualityURL}`, this.playlistURL)
+    await this.initChunkList(this.targetChunkListURL)
+  }
+
+  /**
+   * MediaSequence를  찾아내어 저장하고,
+   * Base MP4 파일을 생성합니다.
+
+   * @param url MediaPlaylist URL
+   */
+  private async initChunkList (url: URL): Promise<void> {
+    const response = await fetch(url)
+    const playlist = await response.text()
+    const parsedPlaylist = parse(playlist)
+
     if (!(parsedPlaylist instanceof MediaPlaylist)) {
-      throw new Error('Failed to parse playlist')
+      throw new Error('Invalid playlist!')
     }
 
     this.mediaSequence = parsedPlaylist.mediaSequenceBase ?? -1
-    if (this.mediaSequence === -1) {
-      throw new Error('Failed to get media sequence')
+    await this.downloadBaseMP4(parsedPlaylist, url)
+  }
+
+  private async downloadBaseMP4 (parsedPlaylist: MediaPlaylist, url: URL): Promise<void> {
+    let baseMP4URL = ''
+    for (const line of parsedPlaylist.source?.split('\n') ?? []) {
+      if (line.startsWith('#EXT-X-MAP')) {
+        const regex = /#EXT-X-MAP:URI="(.+)"/gm
+        const match = regex.exec(line)
+
+        if (match?.[1] === undefined) {
+          throw new Error('Failed to parse EXT-X-MAP')
+        }
+
+        baseMP4URL = match[1]
+      }
     }
+    await this.downloadAndWrite(new URL(`./${baseMP4URL}`, url), `${this.downloadPath}/${this.fileName}.mp4`)
   }
 }
-
-// const x = new M3U8Downloader('https://livecloud.pstatic.net/chzzk/lip2_kr/cflexnmss2u0007/cl0t7kloor6nrqt0fasllad13flkvpicad/hdntl=exp=1718754185~acl=*%2Fcl0t7kloor6nrqt0fasllad13flkvpicad%2F*~data=hdntl~hmac=c057e8a624e9f4e84af0dd14283148c6b99209627fc6fcdb5002f544a64a22ee/chunklist_1080p.m3u8?_HLS_msn=10329&_HLS_part=1', 'asdf')
-
-/*
-private getID (url: string): string {
-  const id = url.split('/').pop()
-  if (id === undefined) {
-    throw new Error('Invalid URL')
-  }
-
-  return id
-}
-
-private checkURLType (url: string): URLType {
-  const liveRegex = /https:\/\/chzzk\.naver\.com\/live\/[^/]+/gm
-  const clipRegex = /https:\/\/chzzk\.naver\.com\/embecdd\/clip\/[^/]+/gm
-  const voidRegex = /https:\/\/chzzk\.naver\.com\/video\/[^/]+/gm
-
-  if (liveRegex.test(url)) {
-    return 'live'
-  }
-
-  if (clipRegex.test(url)) {
-    return 'clip'
-  }
-
-  if (voidRegex.test(url)) {
-    return 'vod'
-  }
-
-  return 'unknown'
-}
-*/
