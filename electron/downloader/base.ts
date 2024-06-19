@@ -21,24 +21,34 @@ export class DownloaderBase {
     this.downloadPath = downloadPath ?? getDefaultDownloadPath()
   }
 
-  protected async downloadAndWrite (url: string | URL, filePath: string): Promise<void> {
+  /**
+   * URL에서 데이터를 다운로드합니다.
+   *
+   * @param url 다운로드할 URL
+   * @returns 다운로드 된 데이터
+   */
+  protected async download (url: string | URL): Promise<Uint8Array> {
     const response = await fetch(url)
-    const reader = response.body?.getReader()
 
-    if (reader === undefined) {
-      throw new Error('Failed to get reader')
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.statusText}`)
     }
 
-    while (true) {
-      const { done, value } = await reader.read()
+    const buffer = await response.arrayBuffer()
+    return new Uint8Array(buffer)
+  }
 
-      if (done) {
-        break
+  /**
+   * 다운로드 된 데이터들을 파일에 작성합니다.
+   *
+   * @param chunks 다운로드 된 데이터
+   */
+  protected async writeChunks (chunks: Array<PromiseSettledResult<Uint8Array>>): Promise<void> {
+    for (const chunk of chunks) {
+      if (chunk.status === 'fulfilled') {
+        await fs.appendFile(`${this.downloadPath}/${this.fileName}.mp4`, chunk.value)
       }
-
-      await fs.appendFile(filePath, value)
     }
-    console.log('downloaded!')
   }
 }
 
@@ -50,6 +60,7 @@ export class M3U8Downloader extends DownloaderBase {
 
   private mediaSequence = -1
   private targetChunkListURL: URL | null = null
+  private duplicatedCounts: number = 0
 
   constructor (playlistURL: string, fileName: string, downloadPath?: string) {
     super(fileName, downloadPath)
@@ -60,11 +71,17 @@ export class M3U8Downloader extends DownloaderBase {
     })
   }
 
+  /**
+   * 다운로드를 시작합니다.
+   */
   start (): void {
     this.isRunning = true
     this.run().then().catch(e => { console.error(e) })
   }
 
+  /**
+   * 다운로드를 중지합니다.
+   */
   stop (): void {
     this.isRunning = false
   }
@@ -75,8 +92,8 @@ export class M3U8Downloader extends DownloaderBase {
     }
 
     while (this.isRunning) {
-      // Sth more to do
-
+      await this.downloadChunks()
+      await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
 
@@ -124,6 +141,12 @@ export class M3U8Downloader extends DownloaderBase {
     await this.downloadBaseMP4(parsedPlaylist, url)
   }
 
+  /**
+   * Base MP4 파일을 다운로드하고 파일에 씁니다.
+   *
+   * @param parsedPlaylist 파싱된 MediaPlaylist
+   * @param url ChunkList URL
+   */
   private async downloadBaseMP4 (parsedPlaylist: MediaPlaylist, url: URL): Promise<void> {
     let baseMP4URL = ''
     for (const line of parsedPlaylist.source?.split('\n') ?? []) {
@@ -138,6 +161,70 @@ export class M3U8Downloader extends DownloaderBase {
         baseMP4URL = match[1]
       }
     }
-    await this.downloadAndWrite(new URL(`./${baseMP4URL}`, url), `${this.downloadPath}/${this.fileName}.mp4`)
+    const bytes = await this.download(new URL(`./${baseMP4URL}`, url))
+    await fs.writeFile(`${this.downloadPath}/${this.fileName}.mp4`, bytes)
+  }
+
+  /**
+   * Chunk들을 다운로드하고 파일에 씁니다.
+   */
+  private async downloadChunks (): Promise<void> {
+    if (this.targetChunkListURL === null) {
+      throw new Error('targetChunkListURL is null!')
+    }
+
+    // Media Sequence 업데이트
+    this.targetChunkListURL.searchParams.set('mediaSequence', this.mediaSequence.toString())
+
+    const response = await fetch(this.targetChunkListURL)
+    const playlist = await response.text()
+    const parsedPlaylist = parse(playlist)
+
+    if (!(parsedPlaylist instanceof MediaPlaylist)) {
+      throw new Error('Invalid playlist!')
+    }
+
+    const tasks: Array<Promise<Uint8Array>> = []
+    let newMediaSequence = this.mediaSequence
+
+    for (const segment of parsedPlaylist.segments) {
+      for (const partial of segment.parts) {
+        if (!this.checkSegmentSequence(segment.mediaSequenceNumber)) {
+          continue
+        }
+
+        newMediaSequence = segment.mediaSequenceNumber
+        tasks.push(this.download(
+          new URL(
+            `./${partial.uri}`,
+            this.targetChunkListURL)
+        ))
+      }
+    }
+
+    const datas = await Promise.allSettled(tasks)
+    await this.writeChunks(datas)
+
+    this.handleDupSegmentSequence(newMediaSequence)
+    this.mediaSequence = newMediaSequence
+  }
+
+  private checkSegmentSequence (segmentSequenceNumber: number): boolean {
+    if (segmentSequenceNumber <= this.mediaSequence) {
+      return false
+    }
+    return true
+  }
+
+  private handleDupSegmentSequence (segmentSequenceNumber: number): void {
+    if (segmentSequenceNumber === this.mediaSequence) {
+      this.duplicatedCounts++
+
+      if (this.duplicatedCounts >= 5) {
+        throw new Error('5 Duplicated Seq #')
+      }
+    } else {
+      this.duplicatedCounts = 0
+    }
   }
 }
