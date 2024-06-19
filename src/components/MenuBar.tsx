@@ -7,15 +7,15 @@ export default function MenuBar (): JSX.Element {
   return (
     <nav className={style.sideMenu}>
       <div className={style.logoItem}>
-        <img src={logo} alt='로고' />
+        <img draggable={false} src={logo} alt='로고' />
       </div>
 
       <div className={style.menuItem}>
-        <img src={homeIcon} alt='홈' />
+        <img draggable={false} src={homeIcon} alt='홈' />
         <a id={style.itemDesc} href='#'>홈</a>
       </div>
       <div className={style.menuItem}>
-        <img src={optionIcon} alt='설정' />
+        <img draggable={false} src={optionIcon} alt='설정' />
         <a id={style.itemDesc} href='#'>설정</a>
       </div>
     </nav>
