@@ -8,8 +8,8 @@ import { MasterPlaylist, MediaPlaylist } from 'hls-parser/types'
    Downloader 클래스는 위 클래스의 Wrapper로 작동하도록 할    */
 
 export class DownloaderBase {
-  protected readonly fileName: string
-  protected readonly downloadPath: string
+  protected fileName: string
+  protected downloadPath: string
 
   /**
    *
@@ -19,6 +19,14 @@ export class DownloaderBase {
   constructor (fileName: string, downloadPath?: string) {
     this.fileName = fileName
     this.downloadPath = downloadPath ?? getDefaultDownloadPath()
+  }
+
+  protected setDownloadPath (path: string): void {
+    this.downloadPath = path
+  }
+
+  protected setFileName (name: string): void {
+    this.fileName = name
   }
 
   /**
