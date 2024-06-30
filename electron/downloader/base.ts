@@ -27,7 +27,7 @@ export class DownloaderBase {
    * @param url 다운로드할 URL
    * @returns 다운로드 된 데이터
    */
-  protected async download (url: string | URL): Promise<Uint8Array> {
+  async download (url: string | URL): Promise<Uint8Array> {
     const response = await fetch(url)
 
     if (!response.ok) {
@@ -43,7 +43,7 @@ export class DownloaderBase {
    *
    * @param chunks 다운로드 된 데이터
    */
-  protected async writeChunks (chunks: Array<PromiseSettledResult<Uint8Array>>): Promise<void> {
+  async writeChunks (chunks: Array<PromiseSettledResult<Uint8Array>>): Promise<void> {
     for (const chunk of chunks) {
       if (chunk.status === 'fulfilled') {
         await fs.appendFile(`${this.downloadPath}/${this.fileName}.mp4`, chunk.value)
@@ -52,23 +52,34 @@ export class DownloaderBase {
   }
 }
 
-export class M3U8Downloader extends DownloaderBase {
+export class M3U8Downloader {
   private readonly playlistURL: URL
   private readonly ready: boolean = false
 
   private isRunning: boolean = false
 
+  private readonly fileName: string
+  private readonly downloadPath: string = getDefaultDownloadPath()
+
   private mediaSequence = -1
   private targetChunkListURL: URL | null = null
   private duplicatedCounts: number = 0
 
+  private readonly BaseDownloader: DownloaderBase
+
   constructor (playlistURL: string, fileName: string, downloadPath?: string) {
-    super(fileName, downloadPath)
     this.playlistURL = new URL(playlistURL)
 
     setOptions({
       silent: true
     })
+
+    this.fileName = fileName
+    if (downloadPath !== undefined) {
+      this.downloadPath = downloadPath
+    }
+
+    this.BaseDownloader = new DownloaderBase(fileName, downloadPath)
   }
 
   /**
@@ -76,7 +87,10 @@ export class M3U8Downloader extends DownloaderBase {
    */
   start (): void {
     this.isRunning = true
-    this.run().then().catch(e => { console.error(e) })
+    this
+      .run()
+      .then()
+      .catch(e => { console.error(e) })
   }
 
   /**
@@ -112,7 +126,7 @@ export class M3U8Downloader extends DownloaderBase {
       throw new Error('Invalid playlist!')
     }
 
-    const variants = parsedPlaylist.variants
+    const { variants } = parsedPlaylist
     variants.sort((a, b) => a.bandwidth - b.bandwidth)
 
     const highestQuality = variants[variants.length - 1]
@@ -123,7 +137,7 @@ export class M3U8Downloader extends DownloaderBase {
   }
 
   /**
-   * MediaSequence를  찾아내어 저장하고,
+   * MediaSequence를 찾아내어 저장하고,
    * Base MP4 파일을 생성합니다.
 
    * @param url MediaPlaylist URL
@@ -161,7 +175,7 @@ export class M3U8Downloader extends DownloaderBase {
         baseMP4URL = match[1]
       }
     }
-    const bytes = await this.download(new URL(`./${baseMP4URL}`, url))
+    const bytes = await this.BaseDownloader.download(new URL(`./${baseMP4URL}`, url))
     await fs.writeFile(`${this.downloadPath}/${this.fileName}.mp4`, bytes)
   }
 
@@ -194,7 +208,7 @@ export class M3U8Downloader extends DownloaderBase {
         }
 
         newMediaSequence = segment.mediaSequenceNumber
-        tasks.push(this.download(
+        tasks.push(this.BaseDownloader.download(
           new URL(
             `./${partial.uri}`,
             this.targetChunkListURL)
@@ -203,7 +217,7 @@ export class M3U8Downloader extends DownloaderBase {
     }
 
     const datas = await Promise.allSettled(tasks)
-    await this.writeChunks(datas)
+    await this.BaseDownloader.writeChunks(datas)
 
     this.handleDupSegmentSequence(newMediaSequence)
     this.mediaSequence = newMediaSequence
