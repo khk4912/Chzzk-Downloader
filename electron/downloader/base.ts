@@ -92,7 +92,9 @@ export class M3U8Downloader extends DownloaderBase {
     }
 
     while (this.isRunning) {
+      const medianum = this.mediaSequence
       await this.downloadChunks()
+      console.log(`#${medianum} -> ${this.mediaSequence}`)
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
@@ -174,10 +176,14 @@ export class M3U8Downloader extends DownloaderBase {
     }
 
     // Media Sequence 업데이트
-    this.targetChunkListURL.searchParams.set('mediaSequence', this.mediaSequence.toString())
+    this.targetChunkListURL.searchParams
+      .set('_HLS_msn', this.mediaSequence.toString())
+
+    console.log('Request URL: ', this.targetChunkListURL)
 
     const response = await fetch(this.targetChunkListURL)
     const playlist = await response.text()
+
     const parsedPlaylist = parse(playlist)
 
     if (!(parsedPlaylist instanceof MediaPlaylist)) {
@@ -186,7 +192,7 @@ export class M3U8Downloader extends DownloaderBase {
 
     const tasks: Array<Promise<Uint8Array>> = []
     let newMediaSequence = this.mediaSequence
-
+    console.log(`Before: ${newMediaSequence}`)
     for (const segment of parsedPlaylist.segments) {
       for (const partial of segment.parts) {
         if (!this.checkSegmentSequence(segment.mediaSequenceNumber)) {
@@ -201,6 +207,7 @@ export class M3U8Downloader extends DownloaderBase {
         ))
       }
     }
+    console.log(`After: ${newMediaSequence}`)
 
     const datas = await Promise.allSettled(tasks)
     await this.writeChunks(datas)
@@ -220,8 +227,8 @@ export class M3U8Downloader extends DownloaderBase {
     if (segmentSequenceNumber === this.mediaSequence) {
       this.duplicatedCounts++
 
-      if (this.duplicatedCounts >= 5) {
-        throw new Error('5 Duplicated Seq #')
+      if (this.duplicatedCounts >= 10) {
+        throw new Error('10 Duplicated Seq #')
       }
     } else {
       this.duplicatedCounts = 0
