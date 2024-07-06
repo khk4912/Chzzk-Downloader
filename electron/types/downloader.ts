@@ -26,3 +26,9 @@ export type DownloaderInfo = UnknownDownloaderInfo | ElseDownloaderInfo
 // }
 
 export type URLType = 'live' | 'clip' | 'vod' | 'unknown'
+
+export interface ChannelInfo {
+  id: string
+  name: URL
+  thubnailURL: string
+}

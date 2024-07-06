@@ -1,43 +1,44 @@
 export interface LiveDetail {
-  liveId: number
-  liveTitle: string
-  status: string
-  liveImageUrl: string
-  defaultThumbnailImageUrl: string | null
-  concurrentUserCount: number
-  accumulateCount: number
-  openDate: string
-  closeDate: string | null
-  adult: boolean
-  clipActive: boolean
-  tags: string[]
-  chatChannelId: string
-  categoryType: string
-  liveCategory: string
-  liveCategoryValue: string
-  chatActive: boolean
-  chatAvailableGroup: string
-  paidPromotion: boolean
-  chatAvailableCondition: string
-  minFollowerMinute: number
-  livePlaybackJson: string
-  p2pQuality: string[]
-  channel: MinChannelInfo
-  livePollingStatusJson: string
-  userAdultStatus: string | null
-  chatDonationRankingExposure: boolean
-  adParameter: AdParameter
-}
-
-interface MinChannelInfo {
-  channelId: string
-  channelName: string
-  channelImageUrl: string
-  verifiedMark: boolean
-}
-
-interface AdParameter {
-  tag: string
+  code: number
+  message: string | null
+  content: {
+    liveId: number
+    liveTitle: string
+    status: string
+    liveImageUrl: string
+    defaultThumbnailImageUrl: string
+    concurrentUserCount: number
+    accumulateCount: number
+    openDate: string
+    closeDate: string
+    adult: boolean
+    clipActive: boolean
+    tags: string[]
+    chatChannelId: string
+    categoryType: string
+    liveCategory: string
+    liveCategoryValue: string
+    chatActive: boolean
+    chatAvailableGroup: string
+    paidPromotion: boolean
+    chatAvailableCondition: string
+    minFollowerMinute: number
+    livePlaybackJson: string
+    p2pQuality: string[]
+    channel: {
+      channelId: string
+      channelName: string
+      channelImageUrl: string
+      verifiedMark: boolean
+    }
+    livePollingStatusJson: string
+    userAdultStatus: unknown
+    blindType: unknown
+    chatDonationRankingExposure: boolean
+    adParameter: {
+      tag: string
+    }
+  }
 }
 
 export interface ChannelInfo {
@@ -86,4 +87,44 @@ export interface LiveInfo {
     minFollowerMinute: number
     chatDonationRankingExposure: boolean
   }
+}
+
+export interface LivePlaybackJSON {
+  meta: {
+    videoId: string
+    streamSeq: number
+    liveId: string
+    paidLive: boolean
+    cdnInfo: {
+      cdnType: string
+      zeroRating: boolean
+    }
+    p2p: boolean
+    cmcdEnabled: boolean
+  }
+  serviceMeta: {
+    contentType: string
+  }
+  live: {
+    start: string
+    open: string
+    timeMachine: boolean
+    status: string
+  }
+  api: Array<{
+    name: string
+    path: string
+  }>
+  media: Array<{
+    mediaId: string
+    protocol: string
+    path: string
+    encodingTrack: unknown[]
+    latency?: string
+  }>
+  thumbnail: {
+    snapshotThumbnailTemplate: string
+    types: string[]
+  }
+  multiview: unknown[]
 }
